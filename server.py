@@ -1,13 +1,15 @@
 import socket
 import sys
-import threading
-import time
 
-class Con(object):
+from chat_thread import ChatThread
+
+class User(object):
 	def __init__(self, conn, thread):
 		self.conn = conn
 		self.thread = thread
-		self.isExit = False
+
+	def get_conn(self):
+		return self.conn
 
 	def close(self):
 		self.conn.close()
@@ -15,23 +17,9 @@ class Con(object):
 		print "Stopping thread " + str(self.thread.threadId)
 
 
-class MyThread(threading.Thread):
-	def __init__(self, threadId, conn, func):
-		threading.Thread.__init__(self)
-		self.threadId = threadId
-		self.conn = conn
-		self.func = func
-
-	def run(self):
-		print "Starting thread " + str(self.threadId)
-		self.func(self.conn, self.threadId)
-		print "Finishing thread " + str(self.threadId)
-
-
 class Server(object):
 	def __init__(self, host, port, listen_sockets=5):
 		self.con_list = list()
-		self.threads_lsit = list()
 		self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 		self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -47,10 +35,10 @@ class Server(object):
 			print "Waiting for connection..."
 			conn, addr = self.socket.accept()
 
-			conn_thread = MyThread(self.counter, conn, self.chat_thread)
+			conn_thread = ChatThread(self.counter, self.chat_thread)
 			conn_thread.daemon = True
+			self.con_list.append(User(conn, conn_thread))
 			conn_thread.start()
-			self.con_list.append(Con(conn, conn_thread))
 
 			self.counter += 1
 			print "Connection added!"
@@ -60,19 +48,34 @@ class Server(object):
 			con.close()
 		self.socket.close()
 
-	def chat_thread(self, conn, threadId):
+	def chat_thread(self, threadId):
+		chat_con = None
+		for con in self.con_list:
+			if con.thread.threadId == threadId:
+				chat_con = con
+				break
+
+		conn = chat_con.get_conn()
+
 		nickname = conn.recv(1024)
 		conn.send(nickname)
 
 		def close():
-			del self.con_list[threadId - 1]
-			print "Disconected: " + nickname
-			self.counter -= 1
+			"""Remove thread from con_list
+			This function removing connection object from
+			main list of connections
+			"""
+			self.con_list.remove(chat_con)
+			print "Disconnected: " + nickname
 
 		while True:
 			try:
 				msg = conn.recv(4096)
 				if msg:
+					for con in self.con_list:
+						if con != chat_con:
+							con.conn.send(nickname + ": " + msg)
+
 					print nickname + ": " + msg
 					conn.send(msg)
 				else:

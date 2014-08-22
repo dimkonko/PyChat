@@ -1,6 +1,8 @@
 import socket
 import sys
 
+from chat_thread import ChatThread
+
 class Client(object):
 
 	def __init__(self, host, port):
@@ -27,15 +29,28 @@ class Client(object):
 			sys.exit()
 
 		print "Your name is: " + self.nickname
+		
+		msg_thread = ChatThread(20, self.recv_other)
+		msg_thread.daemon = True
+		msg_thread.start()
 
 	def chat(self):
+		print "Welcome in the chat room"
+		print "You can start typing a message"
 		while True:
-			msg = raw_input(self.nickname + ": ")
+			msg = raw_input()
 			try:
 				self.socket.send(msg)
 			except socket.error:
 				print "Server is offline"
 				break
+
+	def recv_other(self, threadId):
+		"""Receive messages from other people
+		"""
+		while True:
+			msg = self.socket.recv(4096)
+			print msg
 
 	def close(self):
 		try:
