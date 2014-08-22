@@ -38,6 +38,10 @@ class Client(object):
 				break
 
 	def close(self):
+		try:
+			self.socket.send("")
+		except:
+			pass
 		print "Disconecting..."
 		self.socket.close()
 

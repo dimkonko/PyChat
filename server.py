@@ -12,7 +12,7 @@ class Con(object):
 	def close(self):
 		self.conn.close()
 		print "Disconected"
-		print "Exiting thread " + str(self.thread.threadId)
+		print "Stopping thread " + str(self.thread.threadId)
 
 
 class MyThread(threading.Thread):
@@ -24,7 +24,7 @@ class MyThread(threading.Thread):
 
 	def run(self):
 		print "Starting thread " + str(self.threadId)
-		self.func(self.conn)
+		self.func(self.conn, self.threadId)
 		print "Finishing thread " + str(self.threadId)
 
 
@@ -42,17 +42,17 @@ class Server(object):
 		print "Server started at port: " + str(port)
 
 	def start(self):
-		counter = 1
+		self.counter = 1
 		while True:
 			print "Waiting for connection..."
 			conn, addr = self.socket.accept()
 
-			conn_thread = MyThread(counter, conn, self.chat_thread)
+			conn_thread = MyThread(self.counter, conn, self.chat_thread)
 			conn_thread.daemon = True
 			conn_thread.start()
 			self.con_list.append(Con(conn, conn_thread))
 
-			counter += 1
+			self.counter += 1
 			print "Connection added!"
 
 	def close(self):
@@ -60,9 +60,14 @@ class Server(object):
 			con.close()
 		self.socket.close()
 
-	def chat_thread(self, conn):
+	def chat_thread(self, conn, threadId):
 		nickname = conn.recv(1024)
 		conn.send(nickname)
+
+		def close():
+			del self.con_list[threadId - 1]
+			print "Disconected: " + nickname
+			self.counter -= 1
 
 		while True:
 			try:
@@ -70,10 +75,13 @@ class Server(object):
 				if msg:
 					print nickname + ": " + msg
 					conn.send(msg)
+				else:
+					close()
+					return
 			except:
-				print "Disconected: " + nickname
+				close()
 				return
-
+			
 
 server = Server("localhost", 2714)
 
