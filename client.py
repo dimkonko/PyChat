@@ -50,7 +50,11 @@ class Client(object):
 		"""
 		while True:
 			msg = self.socket.recv(4096)
-			print msg
+			if not msg:
+				self.close()
+				sys.exit()
+			else:
+				print msg
 
 	def close(self):
 		try:

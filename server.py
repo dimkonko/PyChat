@@ -73,11 +73,7 @@ class Server(object):
 				msg = conn.recv(4096)
 				if msg:
 					for con in self.con_list:
-						if con != chat_con:
-							con.conn.send(nickname + ": " + msg)
-
-					print nickname + ": " + msg
-					conn.send(msg)
+						con.conn.send(nickname + ": " + msg)
 				else:
 					close()
 					return

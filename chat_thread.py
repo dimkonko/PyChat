@@ -7,6 +7,4 @@ class ChatThread(threading.Thread):
 		self.func = func
 
 	def run(self):
-		print "Starting thread " + str(self.threadId)
 		self.func(self.threadId)
-		print "Finishing thread " + str(self.threadId)
